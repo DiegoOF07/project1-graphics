@@ -45,12 +45,24 @@ impl Framebuffer {
         self.current_color = color;
     }
 
-    pub fn swap_buffers(&self, window: &mut RaylibHandle, raylib_thread: &RaylibThread){
-        if let Ok(texture) = window.load_texture_from_image(raylib_thread, &self.color_buffer){
-            let mut renderer = window.begin_drawing(raylib_thread);
-            renderer.draw_texture(&texture, 0, 0, Color::WHITE);
-        }
+    pub fn swap_buffers<F: FnOnce(&mut RaylibDrawHandle)>(
+        &self,
+        window: &mut RaylibHandle,
+        raylib_thread: &RaylibThread,
+        draw_overlay: F
+    ) {
+        let texture = window
+            .load_texture_from_image(raylib_thread, &self.color_buffer)
+            .expect("No se pudo crear textura del framebuffer");
+
+        let mut d = window.begin_drawing(raylib_thread);
+        d.clear_background(self.background_color);
+
+        d.draw_texture(&texture, 0, 0, Color::WHITE);
+
+        draw_overlay(&mut d);
     }
+
 
     pub fn draw_line(&mut self, from: Vector2, to: Vector2, color: Color) {
     self.set_current_color(color);

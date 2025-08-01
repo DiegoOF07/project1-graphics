@@ -1,6 +1,6 @@
 use crate::framebuffer::Framebuffer;
 use crate::player::Player;
-use crate::maze::Maze;
+use crate::game::Maze;
 use crate::cast::cast_ray;
 
 use raylib::prelude::*;

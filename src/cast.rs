@@ -1,7 +1,7 @@
 use raylib::prelude::*;
 use crate::framebuffer::Framebuffer;
 use crate::player::Player;
-use crate::maze::Maze;
+use crate::game::Maze;
 
 pub struct Intersect{
     pub distance: f32,

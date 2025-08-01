@@ -7,6 +7,12 @@ use crate::player::Player;
 use crate::cast::cast_ray;
 
 pub type Maze = Vec<Vec<char>>;
+#[derive(PartialEq)]
+pub enum GameState {
+    Menu,
+    Playing,
+    Exiting,
+}
 
 pub fn load_maze(filename: &str) -> Maze {
     let file = File::open(filename).unwrap();

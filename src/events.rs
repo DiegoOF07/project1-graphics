@@ -1,12 +1,13 @@
 use raylib::prelude::*;
 use std::f32::consts::PI;
 use crate::player::Player;
-use crate::maze::Maze;
+use crate::game::Maze;
 
 pub fn process_events(
-    window: &RaylibHandle,
+    window: &mut RaylibHandle,
     player: &mut Player,
     maze: &Maze,
+    last_mouse_x: &mut i32,
     block_size: usize
 ) {
     const MOVE_SPEED: f32 = 5.0;
@@ -43,6 +44,13 @@ pub fn process_events(
             player.pos.y = next_y;
         }
     }
+
+    let mouse_x = window.get_mouse_x();
+    let delta_x = mouse_x - *last_mouse_x;
+    let sensitivity = 0.003;
+    player.a += delta_x as f32 * sensitivity;
+    *last_mouse_x = mouse_x;
+
 }
 
 /// Verifica si el jugador puede moverse a esa posición
