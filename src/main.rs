@@ -5,8 +5,6 @@ mod cast;
 mod events;
 mod renderer;
 
-// use std::time::Duration;
-// use std::thread;
 use raylib::prelude::*;
 use framebuffer::Framebuffer;
 use game::{load_maze, render_maze, GameState};
@@ -25,8 +23,9 @@ fn main() {
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
 
-    window.set_target_fps(60);
-    window.hide_cursor(); // para una experiencia inmersiva
+    window.set_target_fps(60); // Aumentado a 60 por el mejor rendimiento
+    window.hide_cursor();
+    // NO usar disable_cursor() - interfiere con nuestro sistema manual
 
     let mut game_state = GameState::Menu;
 
@@ -39,8 +38,12 @@ fn main() {
                 d.draw_text(">> DOOM CLÁSICO <<", window_width / 2 - 150, 100, 30, Color::RAYWHITE);
                 d.draw_text("Presiona ENTER para jugar", window_width / 2 - 150, 200, 20, Color::LIGHTGRAY);
                 d.draw_text("Presiona ESC para salir", window_width / 2 - 150, 230, 20, Color::LIGHTGRAY);
+                d.draw_text("Controles:", window_width / 2 - 150, 280, 16, Color::GRAY);
+                d.draw_text("WASD: Movimiento | Q/E: Strafe", window_width / 2 - 150, 300, 14, Color::GRAY);
+                d.draw_text("Mouse: Mirar | M: Cambiar vista", window_width / 2 - 150, 320, 14, Color::GRAY);
 
                 if d.is_key_pressed(KeyboardKey::KEY_ENTER) {
+                    // Preparar para el juego: capturar cursor
                     game_state = GameState::Playing;
                 } else if d.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
                     game_state = GameState::Exiting;
@@ -48,16 +51,17 @@ fn main() {
             }
 
             GameState::Playing => {
-                // Carga laberinto y arranca el juego
                 let framebuffer_width = 845;
                 let framebuffer_height = 585;
 
                 let maze = load_maze("./maze.txt");
                 let mut player = Player::new(Vector2::new(1.5 * block_size as f32, 1.5 * block_size as f32));
-                let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height, Color::WHITE);
-                framebuffer.set_background_color(Color::BLACK);
+                let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height, Color::BLACK);
 
                 let mut mode = "3D";
+                
+                // Centrar el mouse al iniciar el juego
+                window.set_mouse_position(Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0));
                 let mut last_mouse_x = window.get_mouse_x();
 
                 // Bucle del juego
@@ -67,6 +71,7 @@ fn main() {
                     }
 
                     if window.is_key_pressed(KeyboardKey::KEY_P) {
+                        window.show_cursor(); // Mostrar cursor al salir del juego
                         game_state = GameState::Menu;
                         break;
                     }
@@ -77,9 +82,9 @@ fn main() {
                     } else {
                         render_world(&mut framebuffer, &maze, &player, block_size);
                         render_maze(&mut framebuffer, &maze, &player, block_size - 55, Vector2::new((window_width - 130) as f32, 0.0), false);
+                        process_events(&mut window, &mut player, &maze, &mut last_mouse_x, block_size);
                     }
 
-                    process_events(&mut window, &mut player, &maze, &mut last_mouse_x, block_size);
                     framebuffer.swap_buffers(&mut window, &raylib_thread, |d| {
                         d.draw_text(&format!("FPS: {}", d.get_fps()), 10, 10, 20, Color::WHITE);
                     });
@@ -90,5 +95,3 @@ fn main() {
         }
     }
 }
-
-
