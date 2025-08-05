@@ -4,13 +4,15 @@ mod player;
 mod cast;
 mod events;
 mod renderer;
+mod texture;
 
 use raylib::prelude::*;
 use framebuffer::Framebuffer;
 use game::{load_maze, render_maze, GameState};
 use player::Player;
 use events::process_events;
-use renderer::render_world;
+use renderer::{render_world, render_world_with_textures};
+use texture::TextureManager;
 
 fn main() {
     let window_width = 845;
@@ -53,12 +55,24 @@ fn main() {
             GameState::Playing => {
                 let framebuffer_width = 845;
                 let framebuffer_height = 585;
+                // Inicializar sistema de texturas
+                let mut texture_manager = TextureManager::new();
+                
+                // Cargar texturas desde archivos (opcional)
+                // texture_manager.load_wall_texture('+', "./textures/brick.png", &mut window, &raylib_thread).ok();
+                // texture_manager.load_wall_texture('#', "./textures/stone.png", &mut window, &raylib_thread).ok();
+                // texture_manager.load_floor_texture("./textures/floor.png", &mut window, &raylib_thread).ok();
+                // texture_manager.load_ceiling_texture("./textures/sky.png", &mut window, &raylib_thread).ok();
+                
+                // Generar texturas procedurales por defecto
+                texture_manager.generate_default_textures();
 
-                let maze = load_maze("./maze.txt");
+                let maze = load_maze("./levels/level1.txt");
                 let mut player = Player::new(Vector2::new(1.5 * block_size as f32, 1.5 * block_size as f32));
                 let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height, Color::BLACK);
 
                 let mut mode = "3D";
+                let mut use_textures = true;
                 
                 // Centrar el mouse al iniciar el juego
                 window.set_mouse_position(Vector2::new(window_width as f32 / 2.0, window_height as f32 / 2.0));
@@ -70,6 +84,11 @@ fn main() {
                         mode = if mode == "2D" { "3D" } else { "2D" };
                     }
 
+                    // Toggle texturas
+                    if window.is_key_pressed(KeyboardKey::KEY_T) {
+                        use_textures = !use_textures;
+                    }
+
                     if window.is_key_pressed(KeyboardKey::KEY_P) {
                         window.show_cursor(); // Mostrar cursor al salir del juego
                         game_state = GameState::Menu;
@@ -77,16 +96,28 @@ fn main() {
                     }
 
                     framebuffer.clear();
+                    // Renderizar según el modo
                     if mode == "2D" {
                         render_maze(&mut framebuffer, &maze, &player, block_size, Vector2::new(0.0, 0.0), true);
                     } else {
-                        render_world(&mut framebuffer, &maze, &player, block_size);
+                        // Renderizar mundo 3D
+                        if use_textures {
+                            render_world_with_textures(&mut framebuffer, &maze, &player, block_size, &texture_manager);
+                        } else {
+                            render_world(&mut framebuffer, &maze, &player, block_size);
+                        }
+                        // Minimapa en la esquina
                         render_maze(&mut framebuffer, &maze, &player, block_size - 55, Vector2::new((window_width - 130) as f32, 0.0), false);
-                        process_events(&mut window, &mut player, &maze, &mut last_mouse_x, block_size);
                     }
-
+                    // Procesar eventos de entrada
+                    process_events(&mut window, &mut player, &maze, &mut last_mouse_x, block_size);
+                    
+                    // Mostrar framebuffer con overlay de información
                     framebuffer.swap_buffers(&mut window, &raylib_thread, |d| {
                         d.draw_text(&format!("FPS: {}", d.get_fps()), 10, 10, 20, Color::WHITE);
+                        d.draw_text(&format!("Modo: {}", mode), 10, 35, 16, Color::WHITE);
+                        d.draw_text(&format!("Texturas: {}", if use_textures { "ON" } else { "OFF" }), 10, 55, 16, Color::WHITE);
+                        d.draw_text("M: Cambiar modo | T: Toggle texturas | P: Menú", 10, 75, 14, Color::LIGHTGRAY);
                     });
                 }
             }
