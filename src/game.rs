@@ -51,7 +51,7 @@ pub fn render_maze(
         }
     }
 
-    let scale = block_size as f32 / 65.0;
+    let scale = block_size as f32 / 30.0;
     let scaled_pos = Vector2::new(player.pos.x * scale, player.pos.y * scale);
     let triangle_size = block_size as f32 * 0.5;
 

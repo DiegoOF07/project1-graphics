@@ -9,5 +9,6 @@ debug = false
 
 [dependencies]
 raylib = "5.5.1"
+image = "0.25.6"
 
 

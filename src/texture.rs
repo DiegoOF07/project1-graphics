@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 use crate::framebuffer::{Framebuffer, rgba_to_u32};
 use std::collections::HashMap;
+use image;
 
 pub struct TextureManager {
     // Almacenar texturas como datos de píxeles para acceso rápido
@@ -67,26 +68,52 @@ impl TextureManager {
         let width = image.width as u32;
         let height = image.height as u32;
 
-        // Convertir imagen a nuestro formato de píxeles
+        // Verificar que la imagen se cargó correctamente
+        if width == 0 || height == 0 {
+            return Err(format!("Imagen inválida: {} (dimensiones: {}x{})", filename, width, height));
+        }
+
         let mut pixels = Vec::with_capacity((width * height) as usize);
         
-        // Crear textura temporal para obtener datos de píxeles
-        let texture = rl.load_texture_from_image(thread, &image)
-            .map_err(|_| "No se pudo crear textura temporal".to_string())?;
-
-        // Extraer datos de píxeles (esto es una aproximación - en un caso real necesitarías acceso directo a los datos de la imagen)
+        // Acceso directo a los datos de la imagen
+        // NOTA: Esto requiere acceso a los datos internos de la imagen de raylib
+        // Una alternativa es usar la crate 'image' directamente
+        
+        // Opción 1: Usando raylib (requiere acceso unsafe o métodos específicos)
+        // Por ahora, como workaround, podemos crear una textura temporal y leerla
+        
+        // Opción 2: Usar la crate 'image' directamente (recomendado)
+        // Necesitarás agregar esto a tu Cargo.toml:
+        // image = "0.24"
+        
+        use std::path::Path;
+        
+        // Cargar imagen usando la crate 'image'
+        let img = image::open(Path::new(filename))
+            .map_err(|e| format!("Error abriendo imagen {}: {}", filename, e))?;
+        
+        // Convertir a RGBA8
+        let rgba_img = img.to_rgba8();
+        let (img_width, img_height) = rgba_img.dimensions();
+        
+        // Verificar dimensiones
+        if img_width != width || img_height != height {
+            println!("Advertencia: Dimensiones inconsistentes para {}", filename);
+        }
+        
+        // Extraer píxeles
         for y in 0..height {
             for x in 0..width {
-                // Por ahora usamos un color basado en la posición como placeholder
-                // En una implementación real, extraerías los píxeles directamente de la imagen
-                let r = ((x * 255) / width) as u8;
-                let g = ((y * 255) / height) as u8;
-                let b = 128;
-                let a = 255;
+                let pixel = rgba_img.get_pixel(x, y);
+                let r = pixel[0];
+                let g = pixel[1];
+                let b = pixel[2];
+                let a = pixel[3];
                 pixels.push(rgba_to_u32(r, g, b, a));
             }
         }
 
+        println!("Textura cargada exitosamente: {} ({}x{})", filename, width, height);
         Ok(TextureData { width, height, pixels })
     }
 

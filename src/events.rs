@@ -13,7 +13,7 @@ pub fn process_events(
     // Constantes de movimiento
     const MOVE_SPEED: f32 = 3.5;
     const KEYBOARD_ROTATION_SPEED: f32 = PI / 60.0;
-    const MOUSE_SENSITIVITY: f32 = 0.002;
+    const MOUSE_SENSITIVITY: f32 = 0.003;
     const MAX_ROTATION_PER_FRAME: f32 = PI / 20.0;
 
     // === ROTACIÓN CON MOUSE ===

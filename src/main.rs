@@ -15,9 +15,9 @@ use renderer::{render_world, render_world_with_textures};
 use texture::TextureManager;
 
 fn main() {
-    let window_width = 845;
-    let window_height = 585;
-    let block_size = 65 as usize;
+    let window_width = 1050;
+    let window_height = 570;
+    let block_size = 30 as usize;
 
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
@@ -53,21 +53,21 @@ fn main() {
             }
 
             GameState::Playing => {
-                let framebuffer_width = 845;
-                let framebuffer_height = 585;
+                let framebuffer_width = 1050;
+                let framebuffer_height = 570;
                 // Inicializar sistema de texturas
                 let mut texture_manager = TextureManager::new();
                 
                 // Cargar texturas desde archivos (opcional)
                 // texture_manager.load_wall_texture('+', "./textures/brick.png", &mut window, &raylib_thread).ok();
-                // texture_manager.load_wall_texture('#', "./textures/stone.png", &mut window, &raylib_thread).ok();
-                // texture_manager.load_floor_texture("./textures/floor.png", &mut window, &raylib_thread).ok();
+                texture_manager.load_wall_texture('#', "./textures/wall.jpg", &mut window, &raylib_thread).ok();
+                texture_manager.load_floor_texture("./textures/floor.jpg", &mut window, &raylib_thread).ok();
                 // texture_manager.load_ceiling_texture("./textures/sky.png", &mut window, &raylib_thread).ok();
                 
                 // Generar texturas procedurales por defecto
-                texture_manager.generate_default_textures();
+                // texture_manager.generate_default_textures();
 
-                let maze = load_maze("./levels/level1.txt");
+                let maze = load_maze("./levels/level2.txt");
                 let mut player = Player::new(Vector2::new(1.5 * block_size as f32, 1.5 * block_size as f32));
                 let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height, Color::BLACK);
 
@@ -107,7 +107,7 @@ fn main() {
                             render_world(&mut framebuffer, &maze, &player, block_size);
                         }
                         // Minimapa en la esquina
-                        render_maze(&mut framebuffer, &maze, &player, block_size - 55, Vector2::new((window_width - 130) as f32, 0.0), false);
+                        render_maze(&mut framebuffer, &maze, &player, block_size - 20, Vector2::new((window_width - 350) as f32, 0.0), false);
                     }
                     // Procesar eventos de entrada
                     process_events(&mut window, &mut player, &maze, &mut last_mouse_x, block_size);
