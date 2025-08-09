@@ -75,17 +75,6 @@ impl TextureManager {
 
         let mut pixels = Vec::with_capacity((width * height) as usize);
         
-        // Acceso directo a los datos de la imagen
-        // NOTA: Esto requiere acceso a los datos internos de la imagen de raylib
-        // Una alternativa es usar la crate 'image' directamente
-        
-        // Opción 1: Usando raylib (requiere acceso unsafe o métodos específicos)
-        // Por ahora, como workaround, podemos crear una textura temporal y leerla
-        
-        // Opción 2: Usar la crate 'image' directamente (recomendado)
-        // Necesitarás agregar esto a tu Cargo.toml:
-        // image = "0.24"
-        
         use std::path::Path;
         
         // Cargar imagen usando la crate 'image'
@@ -136,8 +125,8 @@ impl TextureManager {
     pub fn get_floor_color(&self, world_x: f32, world_y: f32) -> u32 {
         if let Some(texture) = &self.floor_texture {
             // Mapear coordenadas del mundo a coordenadas de textura
-            let texture_x = (world_x / 64.0) % 1.0; // Repetir cada 64 unidades
-            let texture_y = (world_y / 64.0) % 1.0;
+            let texture_x = (world_x / 30.0) % 1.0; // Repetir cada 64 unidades
+            let texture_y = (world_y / 30.0) % 1.0;
             self.sample_texture(texture, texture_x, texture_y)
         } else {
             rgba_to_u32(64, 64, 64, 255) // Gris oscuro por defecto
@@ -152,9 +141,12 @@ impl TextureManager {
             let texture_y = (screen_y / screen_height) % 1.0;
             self.sample_texture(texture, texture_x, texture_y)
         } else {
-            // Gradiente de cielo por defecto (azul arriba, más claro abajo)
-            let intensity = (screen_y / screen_height * 100.0) as u8 + 100;
-            rgba_to_u32(intensity / 2, intensity / 2, intensity.min(255), 255)
+            // Gradiente nocturno: azul oscuro arriba, morado/gris abajo
+            let progress = screen_y / screen_height;
+            let r = (20.0 + 30.0 * (1.0 - progress)) as u8; // Rojo tenue
+            let g = (20.0 + 25.0 * (1.0 - progress)) as u8; // Verde tenue
+            let b = (50.0 + 80.0 * (1.0 - progress)) as u8; // Azul profundo
+            rgba_to_u32(r, g, b, 255)
         }
     }
 
@@ -267,22 +259,39 @@ impl TextureManager {
         TextureData { width, height, pixels }
     }
 
-    /// Generar textura procedural de cielo
     fn generate_sky_texture(&self, width: u32, height: u32) -> TextureData {
         let mut pixels = Vec::with_capacity((width * height) as usize);
-        
+
         for y in 0..height {
             for x in 0..width {
-                // Gradiente de cielo: azul arriba, más claro hacia abajo
-                let sky_intensity = ((height - y) as f32 / height as f32 * 255.0) as u8;
-                let r = sky_intensity / 3;
-                let g = sky_intensity / 2;
-                let b = sky_intensity;
-                
-                pixels.push(rgba_to_u32(r, g, b, 255));
+                let progress = y as f32 / height as f32;
+
+                // Zona superior: azul muy oscuro con toque morado
+                let (r, g, b) = if progress < 0.3 {
+                    let intensity = (progress / 0.3 * 25.0) as u8;
+                    (intensity, intensity / 2, 40 + intensity)
+                } else if progress < 0.7 {
+                    // Transición a azul/morado medio
+                    let local_progress = (progress - 0.3) / 0.4;
+                    let blue_intensity = (60.0 + local_progress * 40.0) as u8;
+                    let purple_fade = (40.0 * (1.0 - local_progress)) as u8;
+                    (purple_fade, purple_fade / 2, blue_intensity)
+                } else {
+                    // Horizonte: azul claro con toque gris/morado
+                    let local_progress = (progress - 0.7) / 0.3;
+                    let blue_intensity = (100.0 + local_progress * 40.0) as u8;
+                    let gray_tint = (local_progress * 30.0) as u8;
+                    (gray_tint, gray_tint, blue_intensity)
+                };
+
+                let final_r = r as u8;
+                let final_g = g as u8;
+                let final_b = b as u8;
+
+                pixels.push(rgba_to_u32(final_r, final_g, final_b, 255));
             }
         }
-        
+
         TextureData { width, height, pixels }
     }
 }

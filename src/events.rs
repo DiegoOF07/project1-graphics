@@ -35,9 +35,10 @@ pub fn process_events(
     if raw_delta.abs() > 2 && raw_delta.abs() < 200 {
         let rotation_amount = raw_delta as f32 * MOUSE_SENSITIVITY;
         clamped_rotation = rotation_amount.clamp(-MAX_ROTATION_PER_FRAME, MAX_ROTATION_PER_FRAME);
+        // window.set_mouse_position(Vector2::new(screen_center_x as f32, window.get_screen_height() as f32 / 2.0));
     } else {
         // Detectar si estamos en una zona cercana al borde
-        let edge_threshold = 60; // píxeles
+        let edge_threshold = 150; // píxeles
         if current_mouse_x <= edge_threshold {
             clamped_rotation = -MAX_ROTATION_PER_FRAME / 2.0; // rotar a la izquierda lentamente
         } else if current_mouse_x >= screen_width - edge_threshold {
@@ -49,6 +50,7 @@ pub fn process_events(
     
     // Actualizar last_mouse_x
     *last_mouse_x = current_mouse_x;
+
 
     // === ROTACIÓN CON TECLADO (más lenta) ===
     if window.is_key_down(KeyboardKey::KEY_LEFT) {
