@@ -27,8 +27,8 @@ impl TextureManager {
     }
 
     /// Cargar textura de pared para un carácter específico del maze
-    pub fn load_wall_texture(&mut self, wall_char: char, filename: &str, rl: &mut RaylibHandle, thread: &RaylibThread) -> Result<(), String> {
-        match self.load_texture_data(filename, rl, thread) {
+    pub fn load_wall_texture(&mut self, wall_char: char, filename: &str, _rl: &mut RaylibHandle, _thread: &RaylibThread) -> Result<(), String> {
+        match self.load_texture_data(filename) {
             Ok(texture_data) => {
                 self.wall_textures.insert(wall_char, texture_data);
                 Ok(())
@@ -38,8 +38,8 @@ impl TextureManager {
     }
 
     /// Cargar textura de suelo
-    pub fn load_floor_texture(&mut self, filename: &str, rl: &mut RaylibHandle, thread: &RaylibThread) -> Result<(), String> {
-        match self.load_texture_data(filename, rl, thread) {
+    pub fn load_floor_texture(&mut self, filename: &str, _rl: &mut RaylibHandle, _thread: &RaylibThread) -> Result<(), String> {
+        match self.load_texture_data(filename) {
             Ok(texture_data) => {
                 self.floor_texture = Some(texture_data);
                 Ok(())
@@ -49,8 +49,8 @@ impl TextureManager {
     }
 
     /// Cargar textura de techo/cielo
-    pub fn load_ceiling_texture(&mut self, filename: &str, rl: &mut RaylibHandle, thread: &RaylibThread) -> Result<(), String> {
-        match self.load_texture_data(filename, rl, thread) {
+    pub fn load_ceiling_texture(&mut self, filename: &str, _rl: &mut RaylibHandle, _thread: &RaylibThread) -> Result<(), String> {
+        match self.load_texture_data(filename) {
             Ok(texture_data) => {
                 self.ceiling_texture = Some(texture_data);
                 Ok(())
@@ -60,21 +60,7 @@ impl TextureManager {
     }
 
     /// Función interna para cargar datos de textura desde archivo
-    fn load_texture_data(&self, filename: &str, rl: &mut RaylibHandle, thread: &RaylibThread) -> Result<TextureData, String> {
-        // Cargar imagen
-        let image = Image::load_image(filename)
-            .map_err(|_| format!("No se pudo cargar la imagen: {}", filename))?;
-
-        let width = image.width as u32;
-        let height = image.height as u32;
-
-        // Verificar que la imagen se cargó correctamente
-        if width == 0 || height == 0 {
-            return Err(format!("Imagen inválida: {} (dimensiones: {}x{})", filename, width, height));
-        }
-
-        let mut pixels = Vec::with_capacity((width * height) as usize);
-        
+    fn load_texture_data(&self, filename: &str) -> Result<TextureData, String> {
         use std::path::Path;
         
         // Cargar imagen usando la crate 'image'
@@ -83,12 +69,14 @@ impl TextureManager {
         
         // Convertir a RGBA8
         let rgba_img = img.to_rgba8();
-        let (img_width, img_height) = rgba_img.dimensions();
+        let (width, height) = rgba_img.dimensions();
         
-        // Verificar dimensiones
-        if img_width != width || img_height != height {
-            println!("Advertencia: Dimensiones inconsistentes para {}", filename);
+        // Verificar dimensiones válidas
+        if width == 0 || height == 0 {
+            return Err(format!("Imagen inválida: {} (dimensiones: {}x{})", filename, width, height));
         }
+        
+        let mut pixels = Vec::with_capacity((width * height) as usize);
         
         // Extraer píxeles
         for y in 0..height {
@@ -116,6 +104,8 @@ impl TextureManager {
                 '+' => rgba_to_u32(139, 69, 19, 255),   // Marrón (madera)
                 '#' => rgba_to_u32(128, 128, 128, 255), // Gris (piedra)
                 '=' => rgba_to_u32(160, 82, 45, 255),   // Marrón claro (ladrillo)
+                '-' => rgba_to_u32(180, 82, 45, 255),   // Marrón claro (pared horizontal)
+                '|' => rgba_to_u32(160, 92, 55, 255),   // Marrón medio (pared vertical)
                 _ => rgba_to_u32(255, 0, 0, 255),       // Rojo por defecto
             }
         }
@@ -125,7 +115,7 @@ impl TextureManager {
     pub fn get_floor_color(&self, world_x: f32, world_y: f32) -> u32 {
         if let Some(texture) = &self.floor_texture {
             // Mapear coordenadas del mundo a coordenadas de textura
-            let texture_x = (world_x / 30.0) % 1.0; // Repetir cada 64 unidades
+            let texture_x = (world_x / 30.0) % 1.0; // Repetir cada 30 unidades (block_size)
             let texture_y = (world_y / 30.0) % 1.0;
             self.sample_texture(texture, texture_x, texture_y)
         } else {
@@ -174,6 +164,13 @@ impl TextureManager {
         // Textura de piedra para '#'
         let stone_texture = self.generate_stone_texture(64, 64);
         self.wall_textures.insert('#', stone_texture);
+
+        // Texturas para paredes horizontales y verticales
+        let wood_h_texture = self.generate_wood_texture(64, 64, true);
+        self.wall_textures.insert('-', wood_h_texture);
+        
+        let wood_v_texture = self.generate_wood_texture(64, 64, false);
+        self.wall_textures.insert('|', wood_v_texture);
 
         // Textura de suelo
         self.floor_texture = Some(self.generate_floor_texture(64, 64));
@@ -233,6 +230,38 @@ impl TextureManager {
         TextureData { width, height, pixels }
     }
 
+    /// Generar textura procedural de madera
+    fn generate_wood_texture(&self, width: u32, height: u32, horizontal: bool) -> TextureData {
+        let mut pixels = Vec::with_capacity((width * height) as usize);
+        
+        for y in 0..height {
+            for x in 0..width {
+                // Determinar la coordenada principal para las vetas
+                let main_coord = if horizontal { x } else { y };
+                let cross_coord = if horizontal { y } else { x };
+                
+                // Patrón de vetas de madera
+                let grain_period = if horizontal { width / 8 } else { height / 8 };
+                let grain = ((main_coord % grain_period) as f32 / grain_period as f32).sin();
+                
+                // Variación cruzada sutil
+                let cross_var = ((cross_coord as f32 * 0.1).sin() * 0.1).abs();
+                
+                // Color base marrón
+                let base_brown = 139.0;
+                let variation = grain * 40.0 + cross_var * 20.0;
+                
+                let r = (base_brown + variation).max(100.0).min(180.0) as u8;
+                let g = ((base_brown + variation) * 0.5).max(50.0).min(120.0) as u8;
+                let b = ((base_brown + variation) * 0.2).max(10.0).min(60.0) as u8;
+                
+                pixels.push(rgba_to_u32(r, g, b, 255));
+            }
+        }
+        
+        TextureData { width, height, pixels }
+    }
+
     /// Generar textura procedural de suelo
     fn generate_floor_texture(&self, width: u32, height: u32) -> TextureData {
         let mut pixels = Vec::with_capacity((width * height) as usize);
@@ -246,13 +275,17 @@ impl TextureManager {
                 
                 let is_dark_tile = (tile_x + tile_y) % 2 == 0;
                 
-                let color = if is_dark_tile {
-                    rgba_to_u32(40, 40, 40, 255)  // Gris muy oscuro
-                } else {
-                    rgba_to_u32(80, 80, 80, 255)  // Gris oscuro
-                };
+                // Añadir variación dentro de cada baldosa
+                let local_x = x % tile_size;
+                let local_y = y % tile_size;
+                let border_width = 2;
+                let is_border = local_x < border_width || local_x >= tile_size - border_width ||
+                               local_y < border_width || local_y >= tile_size - border_width;
                 
-                pixels.push(color);
+                let base_color = if is_dark_tile { 40 } else { 80 };
+                let final_color = if is_border { base_color - 10 } else { base_color };
+                
+                pixels.push(rgba_to_u32(final_color, final_color, final_color, 255));
             }
         }
         

@@ -12,7 +12,7 @@ impl Player {
     pub fn new(pos: Vector2) -> Self{
         Player { 
             pos,
-            a: PI / 3.0,
+            a: 0.0,
             fov: PI / 3.0
         }
     }
