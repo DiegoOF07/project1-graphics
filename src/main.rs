@@ -11,7 +11,7 @@ use framebuffer::Framebuffer;
 use game::{load_maze, render_maze, GameState};
 use player::Player;
 use events::process_events;
-use renderer::{render_world, render_world_with_textures};
+use renderer::{render_world, render_world_with_textures, render_world_with_textures_downscale};
 use texture::TextureManager;
 
 fn main() {
@@ -31,9 +31,9 @@ fn main() {
     let mut texture_manager = TextureManager::new();
     
     texture_manager.generate_default_textures();
-    texture_manager.load_wall_texture('-', "./textures/wall1.jpg", &mut window, &raylib_thread).ok();
-    texture_manager.load_wall_texture('|', "./textures/wall1.jpg", &mut window, &raylib_thread).ok();
-    texture_manager.load_wall_texture('+', "./textures/wall1.jpg", &mut window, &raylib_thread).ok();
+    texture_manager.load_wall_texture('-', "./textures/wall2.png", &mut window, &raylib_thread).ok();
+    texture_manager.load_wall_texture('|', "./textures/wall2.png", &mut window, &raylib_thread).ok();
+    texture_manager.load_wall_texture('+', "./textures/wall3.png", &mut window, &raylib_thread).ok();
     texture_manager.load_floor_texture("./textures/floor.jpg", &mut window, &raylib_thread).ok();
 
     let mut game_state = GameState::Menu;
@@ -62,14 +62,7 @@ fn main() {
             GameState::Playing => {
                 let framebuffer_width = 930;
                 let framebuffer_height = 630;
-                // Inicializar sistema de texturas
-
-                // texture_manager.load_ceiling_texture("./textures/sky.png", &mut window, &raylib_thread).ok();
-                
-                // Generar texturas procedurales por defecto
-                // texture_manager.generate_default_textures();
-
-                let maze = load_maze("./levels/level1.txt");
+                let maze = load_maze("./levels/level2.txt");
                 let mut player = Player::new(Vector2::new(1.5 * block_size as f32, 1.5 * block_size as f32));
                 let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height, Color::BLACK);
 
@@ -104,7 +97,8 @@ fn main() {
                     } else {
                         // Renderizar mundo 3D
                         if use_textures {
-                            render_world_with_textures(&mut framebuffer, &maze, &player, block_size, &texture_manager);
+                            // render_world_with_textures(&mut framebuffer, &maze, &player, block_size, &texture_manager);
+                            render_world_with_textures_downscale(&mut framebuffer, &maze, &player, block_size, &texture_manager);
                         } else {
                             render_world(&mut framebuffer, &maze, &player, block_size);
                         }

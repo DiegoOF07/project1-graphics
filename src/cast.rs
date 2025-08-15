@@ -19,7 +19,7 @@ pub fn cast_ray(
 ) -> Intersect {
     let mut d = 0.0;
     let max_distance = 1000.0;
-    let step_size = 1.0; // Incrementado para mejor rendimiento
+    let step_size = 2.0; // Incrementado para mejor rendimiento
     
     // Pre-calcular color para el rayo
     let ray_color = rgba_to_u32(212, 255, 247, 100);

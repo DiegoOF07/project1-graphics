@@ -93,7 +93,7 @@ pub fn render_world_with_textures(
             }
         }
 
-        // === RENDERIZAR SUELO ===
+        // === RENDERIZAR SUELO === Esto causa la bajada de FPS tener en cuenta
         for y in wall_end..screen_height {
             let ray_dir_x = ray_angle.cos();
             let ray_dir_y = ray_angle.sin();
@@ -111,6 +111,121 @@ pub fn render_world_with_textures(
         }
     }
 }
+
+// Ejemplo parcial: downscaling horizontal con ray_step
+pub fn render_world_with_textures_downscale(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    player: &Player,
+    block_size: usize,
+    texture_manager: &TextureManager,
+) {
+    let screen_width = framebuffer.width as usize;
+    let screen_height = framebuffer.height as usize;
+    let ray_step: usize = 2; // <-- configurable: 1 = full, 2 = mitad de rayos
+    let virtual_rays = (screen_width + ray_step - 1) / ray_step;
+    let fov = player.fov;
+    let half_screen_height = screen_height as f32 / 2.0;
+
+    // Para cada rayo "virtual"
+    for vr in 0..virtual_rays {
+        // coordenada x izquierda del bloque en pantalla
+        let block_x = vr * ray_step;
+        // usamos el píxel central del bloque para el ángulo (reduce jitter)
+        let center_x = (block_x as f32 + (ray_step as f32) / 2.0).min(screen_width as f32 - 1.0);
+        let ray_ratio = center_x / screen_width as f32;
+        let ray_angle = player.a - (fov / 2.0) + (ray_ratio * fov);
+
+        // lanzar rayo (un solo cast por bloque)
+        let intersection = cast_ray(
+            framebuffer,
+            maze,
+            player,
+            block_size,
+            ray_angle,
+            Vector2::new(0.0, 0.0),
+            false,
+        );
+        let corrected_distance = intersection.distance * (player.a - ray_angle).cos();
+
+        // altura de pared
+        let wall_height = if corrected_distance > 0.1 {
+            (block_size as f32 * screen_height as f32) / corrected_distance
+        } else {
+            screen_height as f32
+        };
+
+        let wall_start = (half_screen_height - wall_height / 2.0).max(0.0) as usize;
+        let wall_end = (half_screen_height + wall_height / 2.0).min(screen_height as f32) as usize;
+
+        // hit coords para calcular wall_x (u)
+        let hit_x = player.pos.x + intersection.distance * ray_angle.cos();
+        let hit_y = player.pos.y + intersection.distance * ray_angle.sin();
+        let (wall_x, actual_wall_char) = determine_wall_orientation_and_texture(
+            maze, hit_x, hit_y, block_size, intersection.impact, ray_angle
+        );
+
+        // RENDER TECHO para todo el bloque (replicar horizontalmente)
+        for y in 0..wall_start {
+            let ceiling_color = texture_manager.get_ceiling_color(
+                center_x, y as f32, screen_width as f32, screen_height as f32
+            );
+            for dx in 0..ray_step {
+                let px = block_x + dx;
+                if px < screen_width { framebuffer.set_pixel_fast(px as u32, y as u32, ceiling_color); }
+            }
+        }
+
+        // RENDER PARED texturada (pixel-por-pixel vertical, pero replicada horizontalmente)
+        if wall_start < wall_end {
+            for y in wall_start..wall_end {
+                let wall_progress = (y - wall_start) as f32 / ((wall_end - wall_start) as f32).max(1.0);
+                let wall_color = texture_manager.get_wall_color(actual_wall_char, wall_x, wall_progress);
+
+                // sombreado por distancia (puedes extraer y optimizar esto)
+                let dx_center = (center_x / screen_width as f32) - 0.5;
+                let flashlight_width = 0.12;
+                let flashlight_strength = 0.6;
+                let flashlight_factor = if dx_center.abs() < flashlight_width {
+                    flashlight_strength * (1.0 - dx_center.abs() / flashlight_width)
+                } else { 0.0 };
+
+                let shaded_color = apply_distance_shading(wall_color, corrected_distance, flashlight_factor);
+
+                // replicar la columna en ray_step píxeles horizontales
+                for dx in 0..ray_step {
+                    let px = block_x + dx;
+                    if px < screen_width {
+                        framebuffer.set_pixel_fast(px as u32, y as u32, shaded_color);
+                    }
+                }
+            }
+        }
+
+        // RENDER SUELO (similar: calculas por rayo virtual y replicar)
+        for y in wall_end..screen_height {
+            let ray_dir_x = ray_angle.cos();
+            let ray_dir_y = ray_angle.sin();
+            let p = y as f32 - half_screen_height;
+            let pos_z = 0.5 * screen_height as f32;
+            let row_distance = pos_z / p;
+
+            let floor_x = player.pos.x + row_distance * ray_dir_x;
+            let floor_y = player.pos.y + row_distance * ray_dir_y;
+
+            let floor_color = texture_manager.get_floor_color(floor_x, floor_y);
+            let shaded_floor_color = apply_distance_shading(floor_color, row_distance, 0.0);
+
+            for dx in 0..ray_step {
+                let px = block_x + dx;
+                if px < screen_width {
+                    framebuffer.set_pixel_fast(px as u32, y as u32, shaded_floor_color);
+                }
+            }
+        }
+    }
+}
+
 
 /// Determinar la orientación real de la pared basándose en el contexto del mapa
 fn determine_wall_orientation_and_texture(
@@ -293,7 +408,7 @@ fn apply_distance_shading(color: u32, distance: f32, flashlight_factor: f32) -> 
     let a = ((color >> 24) & 0xFF) as u8;
 
     // Filtro oscuro global
-    let global_darkness = 0.2; // Ajusta este valor para más/menos oscuridad
+    let global_darkness = 0.1; // Ajusta este valor para más/menos oscuridad
 
     // Sombreado por distancia
     let shade_factor = (1.0 - (distance / 500.0).min(0.7)).max(0.3) * global_darkness;
