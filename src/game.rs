@@ -5,6 +5,7 @@ use raylib::prelude::*;
 use crate::framebuffer::{Framebuffer, rgba_to_u32};
 use crate::player::Player;
 use crate::cast::cast_ray;
+use crate::sprites::Sprite; 
 
 pub type Maze = Vec<Vec<char>>;
 
@@ -15,12 +16,52 @@ pub enum GameState {
     Exiting,
 }
 
-pub fn load_maze(filename: &str) -> Maze {
+pub fn load_maze_with_sprites(filename: &str, block_size: usize) -> (Maze, Vec<Sprite>) {
     let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
 
-    reader.lines().map(|line| line.unwrap().chars().collect()).collect()
+    let mut maze: Maze = Vec::new();
+    let mut sprites: Vec<Sprite> = Vec::new();
+
+    for (row_idx, line) in reader.lines().enumerate() {
+        let mut row: Vec<char> = Vec::new();
+        for (col_idx, ch) in line.unwrap().chars().enumerate() {
+            match ch {
+                'O' => {
+                    let world_x = col_idx as f32 + 0.5;
+                    let world_y = row_idx as f32 + 0.5;
+                    sprites.push(Sprite {
+                        pos: Vector2::new(world_x * block_size as f32,
+                                          world_y * block_size as f32),
+                        texture_name: "key".to_string(),
+                        scale: 8.0,
+                        damaging: false,
+                    });
+                    row.push(' ');
+                }
+                'A' => {
+                    let world_x = col_idx as f32 + 0.5;
+                    let world_y = row_idx as f32 + 0.5;
+                    sprites.push(Sprite {
+                        pos: Vector2::new(world_x * block_size as f32,
+                                          world_y * block_size as f32),
+                        texture_name: "spike".to_string(),
+                        scale: 12.0,
+                        damaging: true,
+                    });
+                    row.push(' ');
+                }
+                _ => {
+                    row.push(ch);
+                }
+            }
+        }
+        maze.push(row);
+    }
+
+    (maze, sprites)
 }
+
 
 pub fn render_maze(
     framebuffer: &mut Framebuffer,

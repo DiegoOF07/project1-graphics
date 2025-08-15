@@ -5,14 +5,16 @@ mod cast;
 mod events;
 mod renderer;
 mod texture;
+mod sprites;
 
 use raylib::prelude::*;
 use framebuffer::Framebuffer;
-use game::{load_maze, render_maze, GameState};
+use game::{load_maze_with_sprites, render_maze, GameState};
 use player::Player;
 use events::process_events;
-use renderer::{render_world, render_world_with_textures, render_world_with_textures_downscale};
+use renderer::{render_world, render_world_with_textures_downscale};
 use texture::TextureManager;
+use sprites::render_sprites;
 
 fn main() {
     let window_width = 930;
@@ -40,6 +42,8 @@ fn main() {
     let mut texture_manager = TextureManager::new();
 
     texture_manager.generate_default_textures();
+    texture_manager.load_sprite_texture("key", "./textures/sprites/key.png", &mut window, &raylib_thread).ok();
+    texture_manager.load_sprite_texture("spike", "./textures/sprites/spike.png", &mut window, &raylib_thread).ok();
     
     // Cargar y mantener la textura de fondo del menú como Texture2D de Raylib
     let menu_bg_texture = match Image::load_image("./textures/menu_bg.jpg") {
@@ -167,7 +171,7 @@ fn main() {
                 texture_manager.load_wall_texture('+', wall_textures[selected_level], &mut window, &raylib_thread).ok();
                 texture_manager.load_floor_texture(floor_textures[selected_level], &mut window, &raylib_thread).ok();
 
-                let maze = load_maze(level_files[selected_level]);
+                let (maze, sprites) = load_maze_with_sprites(level_files[selected_level], block_size);
                 let mut player = Player::new(Vector2::new(1.5 * block_size as f32, 1.5 * block_size as f32));
                 let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height, Color::BLACK);
 
@@ -195,7 +199,8 @@ fn main() {
                         render_maze(&mut framebuffer, &maze, &player, block_size, Vector2::new(0.0, 0.0), true);
                     } else {
                         if use_textures {
-                            render_world_with_textures_downscale(&mut framebuffer, &maze, &player, block_size, &texture_manager);
+                            let mut depth_buffer = render_world_with_textures_downscale(&mut framebuffer, &maze, &player, block_size, &texture_manager);
+                            render_sprites(&mut framebuffer, &sprites, &player, &texture_manager, &depth_buffer);
                         } else {
                             render_world(&mut framebuffer, &maze, &player, block_size);
                         }

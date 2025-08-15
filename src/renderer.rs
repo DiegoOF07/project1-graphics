@@ -1,7 +1,7 @@
 use crate::framebuffer::{Framebuffer, rgba_to_u32};
 use crate::player::Player;
 use crate::game::Maze;
-use crate::cast::{cast_ray, Intersect};
+use crate::cast::{cast_ray};
 use crate::texture::TextureManager;
 
 use raylib::prelude::*;
@@ -112,20 +112,21 @@ pub fn render_world_with_textures(
     }
 }
 
-// Ejemplo parcial: downscaling horizontal con ray_step
+//Downscaling horizontal con ray_step
 pub fn render_world_with_textures_downscale(
     framebuffer: &mut Framebuffer,
     maze: &Maze,
     player: &Player,
     block_size: usize,
     texture_manager: &TextureManager,
-) {
+) -> Vec<f32>{
     let screen_width = framebuffer.width as usize;
     let screen_height = framebuffer.height as usize;
     let ray_step: usize = 2; // <-- configurable: 1 = full, 2 = mitad de rayos
     let virtual_rays = (screen_width + ray_step - 1) / ray_step;
     let fov = player.fov;
     let half_screen_height = screen_height as f32 / 2.0;
+    let mut depth_buffer = vec![f32::INFINITY; screen_width];
 
     // Para cada rayo "virtual"
     for vr in 0..virtual_rays {
@@ -147,6 +148,13 @@ pub fn render_world_with_textures_downscale(
             false,
         );
         let corrected_distance = intersection.distance * (player.a - ray_angle).cos();
+
+        for dx in 0..ray_step {
+            let px = block_x + dx;
+            if px < screen_width {
+                depth_buffer[px] = corrected_distance;
+            }
+        }
 
         // altura de pared
         let wall_height = if corrected_distance > 0.1 {
@@ -224,6 +232,8 @@ pub fn render_world_with_textures_downscale(
             }
         }
     }
+
+    depth_buffer
 }
 
 

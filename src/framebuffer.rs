@@ -58,7 +58,7 @@ impl Framebuffer {
     fn ensure_texture(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         if self.texture.is_none() {
             // Crear textura vacía
-            let mut img = Image::gen_image_color(self.width as i32, self.height as i32, Color::WHITE);
+            let img = Image::gen_image_color(self.width as i32, self.height as i32, Color::WHITE);
             self.texture = Some(rl.load_texture_from_image(thread, &img)
                 .expect("No se pudo crear textura"));
         }

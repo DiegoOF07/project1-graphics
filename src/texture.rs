@@ -6,6 +6,7 @@ use image;
 pub struct TextureManager {
     // Almacenar texturas como datos de píxeles para acceso rápido
     wall_textures: HashMap<char, TextureData>,
+    sprite_textures: HashMap<String, TextureData>,
     floor_texture: Option<TextureData>,
     ceiling_texture: Option<TextureData>,
 }
@@ -21,6 +22,7 @@ impl TextureManager {
     pub fn new() -> Self {
         TextureManager {
             wall_textures: HashMap::new(),
+            sprite_textures: HashMap::new(),
             floor_texture: None,
             ceiling_texture: None,
         }
@@ -56,6 +58,23 @@ impl TextureManager {
                 Ok(())
             }
             Err(e) => Err(format!("Error cargando textura de techo '{}': {}", filename, e))
+        }
+    }
+
+    pub fn load_sprite_texture(
+        &mut self,
+        sprite_name: &str,
+        filename: &str,
+        _rl: &mut RaylibHandle,
+        _thread: &RaylibThread
+    ) -> Result<(), String> {
+        match self.load_texture_data(filename) {
+            Ok(texture_data) => {
+                self.sprite_textures.insert(sprite_name.to_string(), texture_data);
+                println!("Sprite '{}' cargado desde '{}'", sprite_name, filename);
+                Ok(())
+            }
+            Err(e) => Err(format!("Error cargando sprite '{}': {}", filename, e)),
         }
     }
 
@@ -138,6 +157,11 @@ impl TextureManager {
             let b = (50.0 + 80.0 * (1.0 - progress)) as u8; // Azul profundo
             rgba_to_u32(r, g, b, 255)
         }
+    }
+
+    /// Obtener datos de textura de sprite
+    pub fn get_sprite_texture(&self, sprite_name: &str) -> Option<&TextureData> {
+        self.sprite_textures.get(sprite_name)
     }
 
     /// Función interna para muestrear una textura en coordenadas UV (0.0-1.0)
