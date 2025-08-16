@@ -3,19 +3,69 @@ use crate::framebuffer::Framebuffer;
 use crate::player::Player;
 use crate::texture::TextureManager;
 use std::f32::consts::PI;
+use std::time::Instant;
 
 /// Representa un sprite en el mundo
 #[derive(Clone)]
 pub struct Sprite {
     pub pos: Vector2,
-    pub texture_name: String, // nombre de la textura en TextureManager
-    pub scale: f32,        // tamaño relativo (1.0 = tamaño normal)
-    pub damaging: bool,    // si hace daño al jugador
+    pub texture_name: String,
+    pub scale: f32,
+    pub damaging: bool,
+    pub animation: Option<AnimatedSprite>, // Opcional para sprites estáticos
+}
+
+#[derive(Clone)]
+pub struct AnimatedSprite {
+    pub frames: Vec<String>,          // nombres de las texturas para cada frame
+    pub frame_duration: f32,          // duración de cada frame en segundos
+    pub current_frame: usize,         // frame actual
+    pub last_update: Instant,         // último momento de actualización
+}
+
+impl Sprite {
+    pub fn new_static(pos: Vector2, texture_name: String, scale: f32, damaging: bool) -> Self {
+        Sprite {
+            pos,
+            texture_name,
+            scale,
+            damaging,
+            animation: None,
+        }
+    }
+
+    pub fn new_animated(pos: Vector2, frames: Vec<String>, frame_duration: f32, scale: f32, damaging: bool) -> Self {
+        Sprite {
+            pos,
+            texture_name: frames[0].clone(), // Usar el primer frame como textura inicial
+            scale,
+            damaging,
+            animation: Some(AnimatedSprite {
+                frames,
+                frame_duration,
+                current_frame: 0,
+                last_update: Instant::now(),
+            }),
+        }
+    }
+
+    pub fn update(&mut self) {
+        if let Some(anim) = &mut self.animation {
+            let now = Instant::now();
+            let elapsed = now.duration_since(anim.last_update).as_secs_f32();
+            
+            if elapsed >= anim.frame_duration {
+                anim.current_frame = (anim.current_frame + 1) % anim.frames.len();
+                self.texture_name = anim.frames[anim.current_frame].clone();
+                anim.last_update = now;
+            }
+        }
+    }
 }
 
 pub fn render_sprites(
     framebuffer: &mut Framebuffer,
-    sprites: &Vec<Sprite>,
+    sprites: &mut Vec<Sprite>,
     player: &Player,
     texture_manager: &TextureManager,
     depth_buffer: &Vec<f32>,
@@ -23,6 +73,10 @@ pub fn render_sprites(
     let screen_width = framebuffer.width as f32;
     let screen_height = framebuffer.height as f32;
     let half_screen_height = screen_height / 2.0;
+
+    for sprite in sprites.iter_mut() {
+        sprite.update();
+    }
 
     // 1. Ordenar sprites de más lejos a más cerca
     let mut sorted_sprites = sprites.clone();

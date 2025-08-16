@@ -30,25 +30,52 @@ pub fn load_maze_with_sprites(filename: &str, block_size: usize) -> (Maze, Vec<S
                 'O' => {
                     let world_x = col_idx as f32 + 0.5;
                     let world_y = row_idx as f32 + 0.5;
-                    sprites.push(Sprite {
-                        pos: Vector2::new(world_x * block_size as f32,
-                                          world_y * block_size as f32),
-                        texture_name: "key".to_string(),
-                        scale: 8.0,
-                        damaging: false,
-                    });
+                    sprites.push(Sprite::new_static(
+                        Vector2::new(world_x * block_size as f32,
+                                     world_y * block_size as f32),
+                        "key".to_string(),
+                        8.0,
+                        false,
+                    ));
                     row.push(' ');
                 }
                 'A' => {
                     let world_x = col_idx as f32 + 0.5;
                     let world_y = row_idx as f32 + 0.5;
-                    sprites.push(Sprite {
-                        pos: Vector2::new(world_x * block_size as f32,
-                                          world_y * block_size as f32),
-                        texture_name: "spike".to_string(),
-                        scale: 12.0,
-                        damaging: true,
-                    });
+                    sprites.push(Sprite::new_static(
+                        Vector2::new(world_x * block_size as f32,
+                                    world_y * block_size as f32),
+                        "spike".to_string(),
+                        12.0,
+                        true
+                    ));
+                    row.push(' ');
+                }
+                'F' => {
+                    let world_x = col_idx as f32 + 0.5;
+                    let world_y = row_idx as f32 + 0.5;
+                    sprites.push(Sprite::new_animated(
+                        Vector2::new(world_x * block_size as f32,
+                                     world_y * block_size as f32),
+                        vec!["fire1".to_string(), "fire2".to_string(), "fire3".to_string()],
+                        0.2,
+                        12.0,
+                        true,
+                    ));
+                    row.push(' ');
+                }
+
+                'H' => {
+                    let world_x = col_idx as f32 + 0.5;
+                    let world_y = row_idx as f32 + 0.5;
+                    sprites.push(Sprite::new_animated(
+                        Vector2::new(world_x * block_size as f32,
+                                     world_y * block_size as f32),
+                        vec!["heal1".to_string(), "heal2".to_string(), "heal3".to_string(), "heal4".to_string()],
+                        0.2,
+                        12.0,
+                        true,
+                    ));
                     row.push(' ');
                 }
                 _ => {
