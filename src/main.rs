@@ -6,6 +6,7 @@ mod events;
 mod renderer;
 mod texture;
 mod sprites;
+mod audio_manager;
 
 use raylib::prelude::*;
 use framebuffer::Framebuffer;
@@ -15,6 +16,7 @@ use events::process_events;
 use renderer::{render_world, render_world_with_textures_downscale};
 use texture::TextureManager;
 use sprites::render_sprites;
+use audio_manager::{AudioManager};
 
 fn main() {
     let window_width = 930;
@@ -29,6 +31,11 @@ fn main() {
         "./textures/floor1.png",
         "./textures/floor2.jpg",
         "./textures/floor3.png",
+    ];
+    let level_musics = [
+        "./audio/music/song1.ogg",
+        "./audio/music/song2.mp3",
+        "./audio/music/song3.wav",
     ];
 
     let (mut window, raylib_thread) = raylib::init()
@@ -52,6 +59,12 @@ fn main() {
     texture_manager.load_sprite_texture("heal3", "./textures/sprites/heal3.png", &mut window, &raylib_thread).ok();
     texture_manager.load_sprite_texture("heal4", "./textures/sprites/heal4.png", &mut window, &raylib_thread).ok();
     
+    let mut audio_manager = AudioManager::new();
+    // audio_manager.load_sound("hurt1", "./audio/hurt1.wav", 0.8);
+    // audio_manager.load_sound("hurt2", "./audio/hurt2.wav", 0.8);
+    // audio_manager.load_sound("hurt3", "./audio/hurt3.wav", 0.8);
+    // audio_manager.load_sound("step1", "./audio/step1.wav", 0.7);
+    
     // Cargar y mantener la textura de fondo del menú como Texture2D de Raylib
     let menu_bg_texture = match Image::load_image("./textures/menu_bg.jpg") {
         Ok(img) => Some(window.load_texture_from_image(&raylib_thread, &img).unwrap()),
@@ -65,10 +78,12 @@ fn main() {
     let level_files = ["./levels/level1.txt", "./levels/level2.txt", "./levels/level3.txt"];
     let level_names = ["Nivel 1", "Nivel 2", "Nivel 3"];
     let mut selected_level = 0;
-
+    
+    audio_manager.play_music("./audio/music/menu.ogg");
     while !window.window_should_close() && game_state != GameState::Exiting {
         match game_state {
             GameState::Menu => {
+                
                 let mut d = window.begin_drawing(&raylib_thread);
                 
                 // Renderizar fondo
@@ -172,7 +187,7 @@ fn main() {
             GameState::Playing => {
                 let framebuffer_width = 930;
                 let framebuffer_height = 630;
-
+                audio_manager.play_music(level_musics[selected_level]);
                 texture_manager.load_wall_texture('-', wall_textures[selected_level], &mut window, &raylib_thread).ok();
                 texture_manager.load_wall_texture('|', wall_textures[selected_level], &mut window, &raylib_thread).ok();
                 texture_manager.load_wall_texture('+', wall_textures[selected_level], &mut window, &raylib_thread).ok();
@@ -196,6 +211,7 @@ fn main() {
                         use_textures = !use_textures;
                     }
                     if window.is_key_pressed(KeyboardKey::KEY_P) {
+                        audio_manager.play_music("./audio/music/menu.ogg");
                         window.show_cursor();
                         game_state = GameState::Menu;
                         break;
